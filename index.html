@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PubAgent Hub</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-12px); }
+            40% { transform: translateX(12px); }
+            60% { transform: translateX(-8px); }
+            80% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .scale-in { animation: scaleIn 0.3s ease-out; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef } = React;
+
+const CORRECT_PIN = '2026';
+
+const DEFAULT_CATEGORIES = [
+    { id: 'presentations', name: 'Presentations', icon: '🎤', color: '#ff6b6b' },
+    { id: 'dashboards', name: 'Dashboards', icon: '📊', color: '#4ecdc4' },
+    { id: 'apps', name: 'Apps', icon: '📱', color: '#a855f7' },
+    { id: 'documents', name: 'Documents', icon: '📄', color: '#fbbf24' },
+    { id: 'tests', name: 'Tests', icon: '🧪', color: '#34d399' },
+    { id: 'tools', name: 'Tools', icon: '🔧', color: '#60a5fa' },
+];
+
+const DEFAULT_APPS = [
+    { id: '1', name: 'Tech Pack Presentation', icon: '🎯', color: '#ff6b6b', category: 'presentations', status: 'live', url: 'https://ng.pubagent.co.uk/present/techpack2', description: 'Interactive tech pack presentation for client pitches and stakeholder reviews.', date: '2026-02-15', pin: '', archived: false },
+    { id: '2', name: 'SMBSMP Dashboard', icon: '📊', color: '#4ecdc4', category: 'dashboards', status: 'live', url: '', description: 'Social media brand strategy monitoring platform with real-time analytics.', date: '2026-01-20', pin: '', archived: false },
+    { id: '3', name: 'NeameGraph Lifecycle Map', icon: '🔄', color: '#60a5fa', category: 'dashboards', status: 'live', url: '', description: 'Visual lifecycle mapping tool for tracking project stages and dependencies.', date: '2026-02-01', pin: '', archived: false },
+    { id: '4', name: 'Hello from PubAgent', icon: '🧪', color: '#34d399', category: 'tests', status: 'live', url: 'https://pa-sites.pages.dev', description: 'Test deployment page for validating Cloudflare Pages pipeline and DNS config.', date: '2026-03-06', pin: '', archived: false },
+    { id: '5', name: 'CSV Brief v3', icon: '📋', color: '#fbbf24', category: 'documents', status: 'draft', url: '', description: 'Third iteration of the CSV brief generator with improved formatting output.', date: '2026-03-01', pin: '', archived: false },
+    { id: '6', name: 'mySNpub MVP', icon: '🍺', color: '#a855f7', category: 'apps', status: 'planned', url: '', description: 'Minimum viable product for the mySNpub social networking application.', date: '2026-03-05', pin: '', archived: false },
+];
+
+const EMOJI_GRID = ['🎯','📊','🔄','🧪','📋','🍺','📱','🔧','📄','🎤','⚡','🚀','💡','🎨','🔥','💎','🌟','🎮','📈','🗂️','🔗','🛠️','📦','🏷️','✨','🧩','🎬','📡','🔒','🌐'];
+const COLOR_OPTIONS = ['#ff6b6b','#4ecdc4','#60a5fa','#a855f7','#fbbf24','#34d399','#f472b6','#fb923c','#818cf8','#e879f9','#38bdf8','#f87171'];
+
+function loadState(key, fallback) {
+    try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; }
+    catch { return fallback; }
+}
+
+// PIN Screen
+function PinScreen({ onUnlock }) {
+    const [pin, setPin] = useState('');
+    const [shaking, setShaking] = useState(false);
+    const [error, setError] = useState(false);
+
+    const handleKey = (n) => {
+        if (pin.length >= 4) return;
+        const next = pin + n;
+        setPin(next);
+        setError(false);
+        if (next.length === 4) {
+            if (next === CORRECT_PIN) {
+                setTimeout(() => onUnlock(), 200);
+            } else {
+                setShaking(true);
+                setError(true);
+                setTimeout(() => { setShaking(false); setPin(''); }, 600);
+            }
+        }
+    };
+
+    const handleDelete = () => { setPin(p => p.slice(0, -1)); setError(false); };
+
+    return (
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'100vh', padding:20 }} className="fade-in">
+            <div style={{ fontSize:40, marginBottom:8 }}>⚡</div>
+            <h1 style={{ fontSize:28, fontWeight:700, marginBottom:8, letterSpacing:'-0.02em' }}>PubAgent Hub</h1>
+            <p style={{ color:'rgba(255,255,255,0.5)', fontSize:15, marginBottom:40 }}>Enter PIN to continue</p>
+            <div className={shaking ? 'shake' : ''} style={{ display:'flex', gap:16, marginBottom:40 }}>
+                {[0,1,2,3].map(i => (
+                    <div key={i} style={{
+                        width:16, height:16, borderRadius:'50%',
+                        background: i < pin.length ? (error ? '#ff6b6b' : '#fff') : 'transparent',
+                        border: `2px solid ${error ? '#ff6b6b' : 'rgba(255,255,255,0.3)'}`,
+                        transition: 'all 0.15s ease'
+                    }} />
+                ))}
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,80px)', gap:12 }}>
+                {[1,2,3,4,5,6,7,8,9].map(n => (
+                    <button key={n} onClick={() => handleKey(String(n))} style={{
+                        width:80, height:80, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.12)',
+                        background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:28, fontWeight:300,
+                        cursor:'pointer', transition:'all 0.15s ease', backdropFilter:'blur(10px)'
+                    }}
+                    onMouseEnter={e => e.target.style.background='rgba(255,255,255,0.12)'}
+                    onMouseLeave={e => e.target.style.background='rgba(255,255,255,0.06)'}>{n}</button>
+                ))}
+                <div />
+                <button onClick={() => handleKey('0')} style={{
+                    width:80, height:80, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.12)',
+                    background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:28, fontWeight:300,
+                    cursor:'pointer', transition:'all 0.15s ease', backdropFilter:'blur(10px)'
+                }}
+                onMouseEnter={e => e.target.style.background='rgba(255,255,255,0.12)'}
+                onMouseLeave={e => e.target.style.background='rgba(255,255,255,0.06)'}>0</button>
+                <button onClick={handleDelete} style={{
+                    width:80, height:80, borderRadius:'50%', border:'none',
+                    background:'transparent', color:'rgba(255,255,255,0.5)', fontSize:16,
+                    cursor:'pointer', transition:'all 0.15s ease'
+                }}
+                onMouseEnter={e => e.target.style.color='#fff'}
+                onMouseLeave={e => e.target.style.color='rgba(255,255,255,0.5)'}>Delete</button>
+            </div>
+        </div>
+    );
+}
+
+// Modal wrapper
+function Modal({ children, onClose }) {
+    return (
+        <div onClick={onClose} style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)',
+            display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:20
+        }}>
+            <div onClick={e => e.stopPropagation()} className="scale-in" style={{
+                background:'linear-gradient(135deg, rgba(30,30,60,0.95), rgba(20,20,50,0.98))',
+                border:'1px solid rgba(255,255,255,0.1)', borderRadius:20, padding:32,
+                maxWidth:520, width:'100%', maxHeight:'85vh', overflowY:'auto',
+                boxShadow:'0 25px 60px rgba(0,0,0,0.5)'
+            }}>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+// Category Manager Modal
+function CategoryManager({ categories, onSave, onClose }) {
+    const [cats, setCats] = useState(categories.map(c => ({ ...c })));
+    const [expandedId, setExpandedId] = useState(null);
+    const [newName, setNewName] = useState('');
+
+    const inputStyle = {
+        width:'100%', padding:'10px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)',
+        background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, outline:'none'
+    };
+
+    const updateCat = (id, field, val) => setCats(cs => cs.map(c => c.id === id ? { ...c, [field]: val } : c));
+    const deleteCat = (id) => setCats(cs => cs.filter(c => c.id !== id));
+    const addCat = () => {
+        if (!newName.trim()) return;
+        setCats(cs => [...cs, { id: Date.now().toString(), name: newName.trim(), icon: '📁', color: '#60a5fa' }]);
+        setNewName('');
+    };
+
+    return (
+        <Modal onClose={onClose}>
+            <h2 style={{ fontSize:20, fontWeight:600, marginBottom:24 }}>🏷️ Manage Categories</h2>
+            <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:20 }}>
+                {cats.map(c => (
+                    <div key={c.id}>
+                        <div onClick={() => setExpandedId(expandedId === c.id ? null : c.id)} style={{
+                            display:'flex', alignItems:'center', gap:12, padding:'12px 16px',
+                            background:'rgba(255,255,255,0.04)', borderRadius:12, cursor:'pointer',
+                            border:'1px solid rgba(255,255,255,0.06)', transition:'all 0.15s ease'
+                        }}>
+                            <span style={{ fontSize:20 }}>{c.icon}</span>
+                            <span style={{ flex:1, fontSize:15 }}>{c.name}</span>
+                            <div style={{ width:12, height:12, borderRadius:'50%', background:c.color }} />
+                            <button onClick={e => { e.stopPropagation(); deleteCat(c.id); }} style={{
+                                background:'none', border:'none', color:'rgba(255,255,255,0.3)',
+                                cursor:'pointer', fontSize:18, padding:'0 4px'
+                            }}>×</button>
+                        </div>
+                        {expandedId === c.id && (
+                            <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:10 }} className="fade-in">
+                                <input value={c.name} onChange={e => updateCat(c.id, 'name', e.target.value)} placeholder="Name" style={inputStyle} />
+                                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                    {COLOR_OPTIONS.map(col => (
+                                        <div key={col} onClick={() => updateCat(c.id, 'color', col)} style={{
+                                            width:28, height:28, borderRadius:'50%', background:col, cursor:'pointer',
+                                            border: c.color === col ? '3px solid #fff' : '3px solid transparent', transition:'all 0.15s ease'
+                                        }} />
+                                    ))}
+                                </div>
+                                <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                                    {['🎤','📊','📱','📄','🧪','🔧','📁','🗂️','📈','🎯','🔗','🌐'].map(em => (
+                                        <div key={em} onClick={() => updateCat(c.id, 'icon', em)} style={{
+                                            width:36, height:36, borderRadius:8, display:'flex', alignItems:'center', justifyContent:'center',
+                                            background: c.icon === em ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.04)',
+                                            cursor:'pointer', fontSize:18, transition:'all 0.15s ease'
+                                        }}>{em}</div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+                <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCat()}
+                    placeholder="New category name..." style={{ ...inputStyle, flex:1 }} />
+                <button onClick={addCat} style={{
+                    padding:'10px 20px', borderRadius:10, border:'none', background:'rgba(255,255,255,0.1)',
+                    color:'#fff', cursor:'pointer', fontSize:14, whiteSpace:'nowrap'
+                }}>+ Add</button>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:24, justifyContent:'flex-end' }}>
+                <button onClick={onClose} style={{ padding:'10px 24px', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'#fff', cursor:'pointer', fontSize:14 }}>Cancel</button>
+                <button onClick={() => { onSave(cats); onClose(); }} style={{ padding:'10px 24px', borderRadius:10, border:'none', background:'#60a5fa', color:'#fff', cursor:'pointer', fontSize:14, fontWeight:600 }}>Save</button>
+            </div>
+        </Modal>
+    );
+}
+
+// Edit App Modal
+function EditAppModal({ app, categories, onSave, onClose }) {
+    const [form, setForm] = useState({ ...app });
+    const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+    const inputStyle = {
+        width:'100%', padding:'10px 14px', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)',
+        background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, outline:'none'
+    };
+    const labelStyle = { fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:4, display:'block' };
+
+    return (
+        <Modal onClose={onClose}>
+            <h2 style={{ fontSize:20, fontWeight:600, marginBottom:24 }}>{app.id ? 'Edit App' : 'Add App'}</h2>
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                <div><label style={labelStyle}>Name</label><input value={form.name} onChange={e => set('name', e.target.value)} style={inputStyle} /></div>
+                <div><label style={labelStyle}>Description</label><textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2} style={{ ...inputStyle, resize:'vertical' }} /></div>
+                <div><label style={labelStyle}>URL</label><input value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://..." style={inputStyle} /></div>
+                <div><label style={labelStyle}>PIN (optional)</label><input value={form.pin} onChange={e => set('pin', e.target.value)} placeholder="Leave empty for no PIN" style={inputStyle} /></div>
+                <div>
+                    <label style={labelStyle}>Category</label>
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {categories.map(c => (
+                            <button key={c.id} onClick={() => set('category', c.id)} style={{
+                                padding:'6px 14px', borderRadius:20, border:'1px solid',
+                                borderColor: form.category === c.id ? c.color : 'rgba(255,255,255,0.1)',
+                                background: form.category === c.id ? c.color + '22' : 'transparent',
+                                color: form.category === c.id ? c.color : 'rgba(255,255,255,0.6)',
+                                cursor:'pointer', fontSize:13, transition:'all 0.15s ease'
+                            }}>{c.icon} {c.name}</button>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <label style={labelStyle}>Status</label>
+                    <div style={{ display:'flex', gap:8 }}>
+                        {[['live','Live','#34d399'],['draft','Draft','#fbbf24'],['planned','Planned','#a855f7']].map(([val,lbl,col]) => (
+                            <button key={val} onClick={() => set('status', val)} style={{
+                                padding:'6px 16px', borderRadius:20, border:'1px solid',
+                                borderColor: form.status === val ? col : 'rgba(255,255,255,0.1)',
+                                background: form.status === val ? col + '22' : 'transparent',
+                                color: form.status === val ? col : 'rgba(255,255,255,0.6)',
+                                cursor:'pointer', fontSize:13, transition:'all 0.15s ease'
+                            }}>{lbl}</button>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <label style={labelStyle}>Icon</label>
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                        {EMOJI_GRID.map(em => (
+                            <div key={em} onClick={() => set('icon', em)} style={{
+                                width:40, height:40, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
+                                background: form.icon === em ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.04)',
+                                cursor:'pointer', fontSize:20, transition:'all 0.15s ease',
+                                border: form.icon === em ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent'
+                            }}>{em}</div>
+                        ))}
+                    </div>
+                </div>
+                <div>
+                    <label style={labelStyle}>Colour</label>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        {COLOR_OPTIONS.map(col => (
+                            <div key={col} onClick={() => set('color', col)} style={{
+                                width:32, height:32, borderRadius:'50%', background:col, cursor:'pointer',
+                                border: form.color === col ? '3px solid #fff' : '3px solid transparent',
+                                transition:'all 0.15s ease'
+                            }} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+            <div style={{ display:'flex', gap:10, marginTop:28, justifyContent:'flex-end' }}>
+                <button onClick={onClose} style={{ padding:'10px 24px', borderRadius:10, border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'#fff', cursor:'pointer', fontSize:14 }}>Cancel</button>
+                <button onClick={() => { onSave(form); onClose(); }} style={{ padding:'10px 24px', borderRadius:10, border:'none', background:'#60a5fa', color:'#fff', cursor:'pointer', fontSize:14, fontWeight:600 }}>Save</button>
+            </div>
+        </Modal>
+    );
+}
+
+// App Card
+function AppCard({ app, categories, managing, onEdit, onArchive, onRestore }) {
+    const [hovered, setHovered] = useState(false);
+    const cat = categories.find(c => c.id === app.category);
+    const statusColors = { live:'#34d399', draft:'#fbbf24', planned:'#a855f7' };
+    const statusColor = statusColors[app.status] || '#666';
+
+    return (
+        <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{
+            background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+            borderRadius:16, overflow:'hidden', transition:'all 0.3s ease',
+            transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+            boxShadow: hovered ? `0 12px 40px ${app.color}25` : '0 4px 20px rgba(0,0,0,0.2)',
+            backdropFilter:'blur(20px)', position:'relative'
+        }}>
+            <div style={{ height:4, background:`linear-gradient(90deg, ${app.color}, ${app.color}88)` }} />
+            <div style={{ padding:20 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:14 }}>
+                    <div style={{
+                        width:48, height:48, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center',
+                        background:`${app.color}18`, fontSize:24
+                    }}>{app.icon}</div>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                        {app.pin && <span style={{ fontSize:12, color:'rgba(255,255,255,0.3)' }}>🔒</span>}
+                        <span style={{
+                            padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, textTransform:'uppercase',
+                            letterSpacing:'0.05em', background:`${statusColor}18`, color:statusColor
+                        }}>{app.status}</span>
+                    </div>
+                </div>
+                <h3 style={{ fontSize:16, fontWeight:600, marginBottom:6, letterSpacing:'-0.01em' }}>{app.name}</h3>
+                <p style={{
+                    fontSize:13, color:'rgba(255,255,255,0.45)', lineHeight:1.5, marginBottom:14,
+                    display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden'
+                }}>{app.description}</p>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:12, color:'rgba(255,255,255,0.25)' }}>{app.date}</span>
+                    {managing ? (
+                        <div style={{ display:'flex', gap:6 }}>
+                            <button onClick={() => onEdit(app)} style={{
+                                padding:'6px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,0.12)',
+                                background:'rgba(255,255,255,0.06)', color:'#fff', cursor:'pointer', fontSize:12
+                            }}>Edit</button>
+                            <button onClick={() => app.archived ? onRestore(app.id) : onArchive(app.id)} style={{
+                                padding:'6px 14px', borderRadius:8, border:'1px solid rgba(255,255,255,0.12)',
+                                background: app.archived ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.06)',
+                                color: app.archived ? '#34d399' : '#fff', cursor:'pointer', fontSize:12
+                            }}>{app.archived ? 'Restore' : 'Archive'}</button>
+                        </div>
+                    ) : (
+                        app.url && <a href={app.url} target="_blank" rel="noopener noreferrer" style={{
+                            color:app.color, textDecoration:'none', fontSize:13, fontWeight:500, transition:'all 0.15s ease',
+                            opacity: hovered ? 1 : 0.7
+                        }}>Open →</a>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// Main Dashboard
+function Dashboard() {
+    const [apps, setApps] = useState(() => loadState('pahub_apps', DEFAULT_APPS));
+    const [categories, setCategories] = useState(() => loadState('pahub_categories', DEFAULT_CATEGORIES));
+    const [search, setSearch] = useState('');
+    const [activeCategory, setActiveCategory] = useState('all');
+    const [managing, setManaging] = useState(false);
+    const [showArchived, setShowArchived] = useState(false);
+    const [editingApp, setEditingApp] = useState(null);
+    const [showCategoryManager, setShowCategoryManager] = useState(false);
+
+    useEffect(() => { localStorage.setItem('pahub_apps', JSON.stringify(apps)); }, [apps]);
+    useEffect(() => { localStorage.setItem('pahub_categories', JSON.stringify(categories)); }, [categories]);
+
+    const counts = {
+        live: apps.filter(a => a.status === 'live' && !a.archived).length,
+        draft: apps.filter(a => a.status === 'draft' && !a.archived).length,
+        planned: apps.filter(a => a.status === 'planned' && !a.archived).length,
+        archived: apps.filter(a => a.archived).length,
+    };
+
+    const filtered = apps.filter(a => {
+        if (showArchived) return a.archived;
+        if (a.archived) return false;
+        if (activeCategory !== 'all' && a.category !== activeCategory) return false;
+        if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.description.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+    });
+
+    const categoryCounts = categories.map(c => ({
+        ...c,
+        count: apps.filter(a => a.category === c.id && !a.archived).length
+    }));
+
+    const saveApp = (form) => {
+        if (form.id && apps.find(a => a.id === form.id)) {
+            setApps(as => as.map(a => a.id === form.id ? form : a));
+        } else {
+            setApps(as => [...as, { ...form, id: Date.now().toString(), date: new Date().toISOString().split('T')[0], archived: false }]);
+        }
+    };
+    const archiveApp = (id) => setApps(as => as.map(a => a.id === id ? { ...a, archived: true } : a));
+    const restoreApp = (id) => setApps(as => as.map(a => a.id === id ? { ...a, archived: false } : a));
+
+    const newApp = () => setEditingApp({ id:'', name:'', description:'', icon:'🚀', color:'#60a5fa', category:categories[0]?.id||'', status:'planned', url:'', pin:'', date:'', archived:false });
+
+    const pillStyle = (active, color) => ({
+        padding:'7px 16px', borderRadius:20, border:'1px solid',
+        borderColor: active ? color || 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.08)',
+        background: active ? (color ? color + '18' : 'rgba(255,255,255,0.1)') : 'transparent',
+        color: active ? (color || '#fff') : 'rgba(255,255,255,0.45)',
+        cursor:'pointer', fontSize:13, transition:'all 0.2s ease', whiteSpace:'nowrap'
+    });
+
+    const headerBtnStyle = (active) => ({
+        padding:'8px 18px', borderRadius:10, border:'1px solid rgba(255,255,255,0.1)',
+        background: active ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.04)',
+        color:'#fff', cursor:'pointer', fontSize:13, transition:'all 0.15s ease'
+    });
+
+    return (
+        <div className="fade-in" style={{ maxWidth:1100, margin:'0 auto', padding:'40px 24px 60px' }}>
+            {/* Header */}
+            <div style={{ marginBottom:32 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16, marginBottom:20 }}>
+                    <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:'-0.02em' }}>⚡ PubAgent Hub</h1>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        <button onClick={() => setShowArchived(!showArchived)} style={headerBtnStyle(showArchived)}>
+                            📦 Archived{counts.archived > 0 && ` (${counts.archived})`}
+                        </button>
+                        <button onClick={() => { setManaging(!managing); setShowArchived(false); }} style={headerBtnStyle(managing)}>
+                            ⚙️ Manage
+                        </button>
+                        {managing && (
+                            <>
+                                <button onClick={newApp} style={{ ...headerBtnStyle(false), background:'rgba(96,165,250,0.15)', borderColor:'rgba(96,165,250,0.3)', color:'#60a5fa' }}>+ Add App</button>
+                                <button onClick={() => setShowCategoryManager(true)} style={headerBtnStyle(false)}>🏷️ Categories</button>
+                            </>
+                        )}
+                    </div>
+                </div>
+                {/* Stats */}
+                <div style={{ display:'flex', gap:24, flexWrap:'wrap', marginBottom:24 }}>
+                    {[['Live', counts.live, '#34d399'],['Draft', counts.draft, '#fbbf24'],['Planned', counts.planned, '#a855f7'],['Archived', counts.archived, 'rgba(255,255,255,0.3)']].map(([label, count, color]) => (
+                        <div key={label} style={{ display:'flex', alignItems:'center', gap:8 }}>
+                            <div style={{ width:8, height:8, borderRadius:'50%', background:color }} />
+                            <span style={{ fontSize:13, color:'rgba(255,255,255,0.5)' }}>{count} {label}</span>
+                        </div>
+                    ))}
+                </div>
+                {/* Search */}
+                {!showArchived && (
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search apps..."
+                        style={{
+                            width:'100%', maxWidth:400, padding:'10px 16px', borderRadius:12,
+                            border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)',
+                            color:'#fff', fontSize:14, outline:'none', marginBottom:20,
+                            backdropFilter:'blur(10px)'
+                        }} />
+                )}
+                {/* Category pills */}
+                {!showArchived && (
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                        <button onClick={() => setActiveCategory('all')} style={pillStyle(activeCategory === 'all', null)}>
+                            All ({apps.filter(a => !a.archived).length})
+                        </button>
+                        {categoryCounts.map(c => (
+                            <button key={c.id} onClick={() => setActiveCategory(c.id)} style={pillStyle(activeCategory === c.id, c.color)}>
+                                {c.icon} {c.name} ({c.count})
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Grid */}
+            <div style={{
+                display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))',
+                gap:20
+            }}>
+                {filtered.map(app => (
+                    <AppCard key={app.id} app={app} categories={categories} managing={managing}
+                        onEdit={setEditingApp} onArchive={archiveApp} onRestore={restoreApp} />
+                ))}
+            </div>
+            {filtered.length === 0 && (
+                <div style={{ textAlign:'center', padding:'60px 20px', color:'rgba(255,255,255,0.3)' }}>
+                    <div style={{ fontSize:48, marginBottom:12 }}>{showArchived ? '📦' : '🔍'}</div>
+                    <p>{showArchived ? 'No archived apps' : 'No apps found'}</p>
+                </div>
+            )}
+
+            {/* Modals */}
+            {editingApp && <EditAppModal app={editingApp} categories={categories} onSave={saveApp} onClose={() => setEditingApp(null)} />}
+            {showCategoryManager && <CategoryManager categories={categories} onSave={setCategories} onClose={() => setShowCategoryManager(false)} />}
+        </div>
+    );
+}
+
+// Root App
+function App() {
+    const [unlocked, setUnlocked] = useState(false);
+    return unlocked ? <Dashboard /> : <PinScreen onUnlock={() => setUnlocked(true)} />;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
