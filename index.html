@@ -63,13 +63,27 @@ const DEFAULT_APPS = [
     { id: '4', name: 'Hello from PubAgent', icon: '🧪', color: '#34d399', category: 'tests', status: 'live', url: 'https://pa-sites.pages.dev', description: 'Test deployment page for validating Cloudflare Pages pipeline and DNS config.', date: '2026-03-06', pin: '', archived: false },
     { id: '5', name: 'CSV Brief v3', icon: '📋', color: '#fbbf24', category: 'documents', status: 'draft', url: '', description: 'Third iteration of the CSV brief generator with improved formatting output.', date: '2026-03-01', pin: '', archived: false },
     { id: '6', name: 'mySNpub MVP', icon: '🍺', color: '#a855f7', category: 'apps', status: 'planned', url: '', description: 'Minimum viable product for the mySNpub social networking application.', date: '2026-03-05', pin: '', archived: false },
+    { id: '7', name: 'LS Retail Stress Test', icon: '🔬', color: '#f59e0b', category: 'tests', status: 'live', url: 'https://lsretail.pubagent.co.uk', description: 'Three stress tests for LS Central — honest assessment of capabilities, gaps, workarounds and questions.', date: '2026-03-17', pin: '', archived: false },
 ];
 
 const EMOJI_GRID = ['🎯','📊','🔄','🧪','📋','🍺','📱','🔧','📄','🎤','⚡','🚀','💡','🎨','🔥','💎','🌟','🎮','📈','🗂️','🔗','🛠️','📦','🏷️','✨','🧩','🎬','📡','🔒','🌐'];
 const COLOR_OPTIONS = ['#ff6b6b','#4ecdc4','#60a5fa','#a855f7','#fbbf24','#34d399','#f472b6','#fb923c','#818cf8','#e879f9','#38bdf8','#f87171'];
 
 function loadState(key, fallback) {
-    try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : fallback; }
+    try {
+        const d = localStorage.getItem(key);
+        if (!d) return fallback;
+        const parsed = JSON.parse(d);
+        // Auto-add new default apps that don't exist yet
+        if (key === 'pahub_apps' && Array.isArray(parsed)) {
+            let changed = false;
+            for (const def of DEFAULT_APPS) {
+                if (!parsed.find(a => a.id === def.id)) { parsed.push(def); changed = true; }
+            }
+            if (changed) localStorage.setItem(key, JSON.stringify(parsed));
+        }
+        return parsed;
+    }
     catch { return fallback; }
 }
 
@@ -427,7 +441,7 @@ function DocumentBucket() {
 
     const loadDocs = useCallback(async () => {
         setLoading(true);
-        const { data } = await sb.from('documents').select('*').order('created_at', { ascending: false });
+        const { data } = await sb.from('hub_documents').select('*').order('created_at', { ascending: false });
         setDocs(data || []);
         setLoading(false);
     }, []);
@@ -443,7 +457,7 @@ function DocumentBucket() {
         try {
             const { error: upErr } = await sb.storage.from('hub-documents').upload(storagePath, file);
             if (upErr) throw upErr;
-            await sb.from('documents').insert({ filename: title.trim(), description: desc.trim() || null, storage_path: storagePath, file_type: file.name.split('.').pop().toLowerCase(), file_size: file.size });
+            await sb.from('hub_documents').insert({ filename: title.trim(), description: desc.trim() || null, storage_path: storagePath, file_type: file.name.split('.').pop().toLowerCase(), file_size: file.size });
             setTitle(''); setDesc(''); setFile(null);
             if (fileRef.current) fileRef.current.value = '';
             setMsg('Uploaded!');
@@ -456,7 +470,7 @@ function DocumentBucket() {
     const handleDelete = async (id, path) => {
         if (!confirm('Delete this document?')) return;
         await sb.storage.from('hub-documents').remove([path]);
-        await sb.from('documents').delete().eq('id', id);
+        await sb.from('hub_documents').delete().eq('id', id);
         loadDocs();
     };
 
