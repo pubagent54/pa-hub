@@ -13,13 +13,15 @@ export default function PinAdmin({ onClose }) {
   const [newLabel, setNewLabel] = useState('')
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => { loadPins() }, [])
+  useEffect(() => {
+    async function loadPins() {
+      const { data } = await supabase.from('hub_pins').select('*').order('issued_date', { ascending: true })
+      if (data) setPins(data)
+      setLoading(false)
+    }
 
-  async function loadPins() {
-    const { data } = await supabase.from('hub_pins').select('*').order('issued_date', { ascending: true })
-    if (data) setPins(data)
-    setLoading(false)
-  }
+    loadPins()
+  }, [])
 
   async function toggleActive(pin) {
     await supabase.from('hub_pins').update({ active: !pin.active }).eq('id', pin.id)
@@ -30,7 +32,7 @@ export default function PinAdmin({ onClose }) {
     if (!newPin || newPin.length !== 4 || !newIssuedTo.trim()) return
     setSaving(true)
 
-    const { data, error } = await supabase.from('hub_pins').insert({
+    const { data } = await supabase.from('hub_pins').insert({
       pin: newPin,
       type: 'sn',
       sublane: newSublane || null,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { CATEGORIES, SIGNALS, SUBLANES, getSublaneColor, getSublaneName, getCategoryColor } from '../lib/constants'
+import { CATEGORIES, SIGNALS, SUBLANES, getSublaneColor, getSublaneName } from '../lib/constants'
 import AppCard from './AppCard'
 import IdeaCard from './IdeaCard'
 import AppRow from './AppRow'
@@ -21,17 +21,19 @@ export default function Dashboard({ session, onLogout }) {
 
   const isMaster = session.type === 'master'
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => {
+    async function loadData() {
+      const [appsRes, ideasRes] = await Promise.all([
+        supabase.from('hub_apps').select('*').eq('archived', false).order('date', { ascending: false }),
+        supabase.from('hub_ideas').select('*').order('created_at', { ascending: false }),
+      ])
+      if (appsRes.data) setApps(appsRes.data)
+      if (ideasRes.data) setIdeas(ideasRes.data)
+      setLoading(false)
+    }
 
-  async function loadData() {
-    const [appsRes, ideasRes] = await Promise.all([
-      supabase.from('hub_apps').select('*').eq('archived', false).order('date', { ascending: false }),
-      supabase.from('hub_ideas').select('*').order('created_at', { ascending: false }),
-    ])
-    if (appsRes.data) setApps(appsRes.data)
-    if (ideasRes.data) setIdeas(ideasRes.data)
-    setLoading(false)
-  }
+    loadData()
+  }, [])
 
   function canSee(item) {
     if (isMaster) return true

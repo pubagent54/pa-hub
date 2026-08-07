@@ -24,7 +24,7 @@ export default function AddIdeaModal({ onClose, onAdded }) {
       date: today,
     }
 
-    const { data, error } = await supabase.from('hub_ideas').insert(idea).select().single()
+    const { data } = await supabase.from('hub_ideas').insert(idea).select().single()
     if (data) onAdded(data)
     else { setSaving(false); alert('Failed to save') }
   }

@@ -57,6 +57,7 @@ INSERT INTO hub_apps (name, icon, color, category, sublane, status, url, descrip
   ('CSV Brief v3', '📋', '#fbbf24', 'sn', NULL, 'draft', '', 'Third iteration of the CSV brief generator with improved formatting output.', '2026-03-01', false),
   ('mySNpub MVP', '🍺', '#a855f7', 'sn', NULL, 'planned', '', 'Minimum viable product for the mySNpub social networking application.', '2026-03-05', false),
   ('NG Explainer', '🌐', '#ff6b6b', 'pubagent', NULL, 'live', 'https://present-ngexplainer-march2026.pubagent.co.uk', 'Interactive presentation explaining NeameGraph.', '2026-03-07', false),
+  ('Review-to-Signal', '📡', '#34d399', 'pubagent', NULL, 'live', 'https://signal.pubagent.co.uk', 'Safe public demo turning simulated review journeys into pub-voice drafts and management signal.', '2026-08-07', false),
   ('Hub Tester', '🧪', '#34d399', 'pubagent', NULL, 'live', 'https://hub-tester.pubagent.co.uk', 'End-to-end deployment pipeline test.', '2026-03-08', false);
 
 -- 6. Enable RLS
