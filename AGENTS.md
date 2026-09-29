@@ -47,7 +47,7 @@ Match the role Joe needs: assistant for a defined task, copilot for exploring an
 
 ## The agent workforce
 
-- Joe runs an agent workforce on Marcus: Todoist boards are the tickets, joebrain.org/grill is his one place (Questions, Your jobs, Goals, Office, AI-acc), and scheduled workers, a checker, captains, an office manager and an accountant keep it moving. Before steering it or working inside it, in any model, read `wiki/agent-context/workforce-manual.md` and Joe's rules in `wiki/agent-context/joe-judgement.md` (29 to 36 are the newest). Only big decisions reach Joe; repairs are kaizen fixes; Claude is kept for planning (building goes to Codex); "start the meeting" runs the latest agenda in `wiki/agent-context/meetings/`.
+- Joe runs an agent workforce on Marcus: Todoist boards are the tickets, joebrain.org/grill is his one place (Questions, Your jobs, Goals, Office, AI-acc), and scheduled workers, a checker, captains, an office manager and an accountant keep it moving. Before steering it or working inside it, in any model, read `wiki/agent-context/workforce-manual.md` and Joe's rules in `wiki/agent-context/joe-rules.md` (rule 48 comes first; the full book with evidence is `joe-judgement.md`). **Joe is the last resort:** outside planning, only his hard lines and a genuine last resort reach him, each saying what was tried first, and keeping the workforce running is agent work, never his. Repairs are kaizen fixes. Claude is kept for planning (building goes to Codex). "Start the meeting" runs the latest agenda in `wiki/agent-context/meetings/`.
 
 ## Verification and protection
 
